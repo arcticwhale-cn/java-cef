@@ -150,6 +150,20 @@ public class CefClient extends CefClientHandler
                 this, url, isOffscreenRendered, isTransparent, context, settings);
     }
 
+    /**
+     * Create a new windowed browser which is parented to the given native
+     * window handle (e.g. the HWND of an SWT Composite on Windows). The handle
+     * must remain valid for the whole lifetime of the browser. After creation
+     * the host is responsible for calling {@link CefBrowserSw#resize(int,int)}
+     * whenever the parent window's client area changes.
+     */
+    public CefBrowser createBrowser(String url, long windowHandle,
+            CefRequestContext context, CefBrowserSettings settings) {
+        if (isDisposed_)
+            throw new IllegalStateException("Can't create browser. CefClient is disposed");
+        return CefBrowserFactory.create(this, url, windowHandle, context, settings);
+    }
+
     @Override
     protected CefBrowser getBrowser(int identifier) {
         synchronized (browser_) {

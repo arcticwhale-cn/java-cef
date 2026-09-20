@@ -972,7 +972,12 @@ void create(std::shared_ptr<JNIObjectsForCreate> objs,
     }
 #if defined(OS_WIN)
     CefWindowHandle parent = TempWindow::GetWindowHandle();
-    if (objs->canvas != nullptr) {
+    if (windowHandle != 0) {
+      // [SWT integration] An explicit parent window handle was injected
+      // (e.g. the HWND of an SWT Composite). Use it directly instead of
+      // extracting the HWND from an AWT canvas via JAWT.
+      parent = (CefWindowHandle)windowHandle;
+    } else if (objs->canvas != nullptr) {
       parent = GetHwndOfCanvas(objs->canvas, env);
     } else {
       // Do not activate hidden browser windows on creation.
@@ -2132,8 +2137,13 @@ Java_org_cef_browser_CefBrowser_1N_N_1SetParent(JNIEnv* env,
                   std::move(callback));
 #else
   CefWindowHandle browserHandle = browser->GetHost()->GetWindowHandle();
-  CefWindowHandle parentHandle =
-      canvas ? util::GetWindowHandle(env, canvas) : kNullWindowHandle;
+  CefWindowHandle parentHandle = kNullWindowHandle;
+  if (windowHandle != 0) {
+    // [SWT integration] Explicitly injected parent window handle.
+    parentHandle = (CefWindowHandle)windowHandle;
+  } else if (canvas != nullptr) {
+    parentHandle = util::GetWindowHandle(env, canvas);
+  }
   if (CefCurrentlyOn(TID_UI)) {
     util::SetParent(browserHandle, parentHandle, std::move(callback));
   } else {
