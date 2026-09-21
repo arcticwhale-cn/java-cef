@@ -41,11 +41,19 @@ bool LifeSpanHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   ScopedJNIString jtargetFrameName(env, target_frame_name);
   jboolean jreturn = JNI_FALSE;
 
+  // [SWT integration] Expose popupFeatures: the geometry requested by the
+  // page (window.open features). Each value has a *Set flag that is false
+  // when the page did not specify it (0 in that case). GetMethodID resolves
+  // the signature at runtime, so this stays in sync with the Java interface.
   JNI_CALL_METHOD(env, handle_, "onBeforePopup",
                   "(Lorg/cef/browser/CefBrowser;Lorg/cef/browser/"
-                  "CefFrame;Ljava/lang/String;Ljava/lang/String;)Z",
+                  "CefFrame;Ljava/lang/String;Ljava/lang/String;IIZIIZIIZ)Z",
                   Boolean, jreturn, jbrowser.get(), jframe.get(),
-                  jtargetUrl.get(), jtargetFrameName.get());
+                  jtargetUrl.get(), jtargetFrameName.get(),
+                  (jint)popupFeatures.x, (jboolean)popupFeatures.xSet,
+                  (jint)popupFeatures.y, (jboolean)popupFeatures.ySet,
+                  (jint)popupFeatures.width, (jboolean)popupFeatures.widthSet,
+                  (jint)popupFeatures.height, (jboolean)popupFeatures.heightSet);
 
   return (jreturn != JNI_FALSE);
 }

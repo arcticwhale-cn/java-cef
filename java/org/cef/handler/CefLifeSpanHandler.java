@@ -19,10 +19,16 @@ public interface CefLifeSpanHandler {
      *         method.
      * @param target_url May be empty if none is specified with the request.
      * @param target_frame_name May be empty if none is specified with the request.
+     * @param x / xSet / y / ySet / width / widthSet / height / heightSet [SWT integration]
+     *        The popup geometry requested by the page (window.open features). Each
+     *        *Set flag is false when the page did not specify the corresponding
+     *        value (0 in that case).
      * @return True to cancel creation of the popup window or false to proceed.
      */
     boolean onBeforePopup(
-            CefBrowser browser, CefFrame frame, String target_url, String target_frame_name);
+            CefBrowser browser, CefFrame frame, String target_url, String target_frame_name,
+            int x, boolean xSet, int y, boolean ySet,
+            int width, boolean widthSet, int height, boolean heightSet);
 
     /**
      * Handle creation of a new browser window.

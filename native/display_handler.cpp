@@ -6,6 +6,10 @@
 
 #include "jni_util.h"
 
+#if defined(OS_WIN)
+#include <windows.h>
+#endif
+
 namespace {
 
 int GetCursorId(cef_cursor_type_t type) {
@@ -103,6 +107,19 @@ void DisplayHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
   ScopedJNIEnv env;
   if (!env)
     return;
+
+#if defined(OS_WIN)
+  // [SWT integration] Top-level native windows (popups created when
+  // OnBeforePopup returns false, or DevTools windows) have no owner to
+  // title them; mirror the page title onto the window text. Child-mode
+  // browsers (parented to an injected host handle) are skipped - their
+  // host toolkit owns any title rendering. Same-thread (CEF UI) call, so
+  // SetWindowTextW cannot deadlock.
+  CefWindowHandle hwnd = browser->GetHost()->GetWindowHandle();
+  if (hwnd != nullptr && ::GetParent(hwnd) == nullptr) {
+    ::SetWindowTextW(hwnd, title.ToWString().c_str());
+  }
+#endif
 
   ScopedJNIBrowser jbrowser(env, browser);
   ScopedJNIString jtitle(env, title);

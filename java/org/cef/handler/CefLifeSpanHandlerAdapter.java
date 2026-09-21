@@ -15,7 +15,9 @@ import org.cef.browser.CefFrame;
 public abstract class CefLifeSpanHandlerAdapter implements CefLifeSpanHandler {
     @Override
     public boolean onBeforePopup(
-            CefBrowser browser, CefFrame frame, String target_url, String target_frame_name) {
+            CefBrowser browser, CefFrame frame, String target_url, String target_frame_name,
+            int x, boolean xSet, int y, boolean ySet,
+            int width, boolean widthSet, int height, boolean heightSet) {
         return false;
     }
 
