@@ -38,6 +38,7 @@
 
 #if defined(OS_WIN)
 #include <memory>
+#include <windows.h>
 #undef MOUSE_MOVED
 #endif
 
@@ -1290,6 +1291,68 @@ Java_org_cef_browser_CefBrowser_1N_N_1GetWindowHandle(JNIEnv* env,
   ASSERT(util_mac::IsNSView((void*)displayHandle));
 #endif
   return (jlong)windowHandle;
+}
+
+#if defined(OS_WIN)
+namespace {
+// [SWT integration] Apply a freshly created HICON to a top-level browser
+// window on the UI thread (same thread owns the window under MTML, so the
+// messages are delivered synchronously). Destroys the icon a previous call
+// installed (tracked via a window property); icons still live at window
+// destruction are reclaimed at process exit - popups set few icons.
+void ApplyWindowIcon(HWND hwnd, HICON icon) {
+  const wchar_t* kOldIconProp = L"jcefOldIcon";
+  HICON old = (HICON)::GetPropW(hwnd, kOldIconProp);
+  if (old != nullptr) {
+    ::RemovePropW(hwnd, kOldIconProp);
+    ::DestroyIcon(old);
+  }
+  ::SetPropW(hwnd, kOldIconProp, (HANDLE)icon);
+  ::SendMessageW(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+  ::SendMessageW(hwnd, WM_SETICON, ICON_BIG, (LPARAM)icon);
+}
+}  // namespace
+#endif
+
+// [SWT integration] Set the window icon of a top-level native window (popups
+// created via OnBeforePopup returning false, DevTools) from top-down BGRA
+// pixels. Child-mode browsers (parented to an injected host handle) are
+// ignored - their host toolkit owns any icon rendering. GDI objects are
+// created on the calling thread; the window messages are posted to the UI
+// thread (same pattern as N_WasResized).
+JNIEXPORT void JNICALL
+Java_org_cef_browser_CefBrowser_1N_N_1SetWindowIcon(JNIEnv* env,
+                                                    jobject obj,
+                                                    jint width,
+                                                    jint height,
+                                                    jbyteArray bgra) {
+#if defined(OS_WIN)
+  if (bgra == nullptr || width <= 0 || height <= 0)
+    return;
+  CefRefPtr<CefBrowser> browser = JNI_GET_BROWSER_OR_RETURN(env, obj);
+  CefWindowHandle hwnd = browser->GetHost()->GetWindowHandle();
+  if (hwnd == nullptr || ::GetParent(hwnd) != nullptr)
+    return;
+
+  jbyte* pixels = env->GetByteArrayElements(bgra, nullptr);
+  HBITMAP color = ::CreateBitmap(width, height, 1, 32, pixels);
+  env->ReleaseByteArrayElements(bgra, pixels, JNI_ABORT);
+  if (color == nullptr)
+    return;
+  HBITMAP mask = ::CreateBitmap(width, height, 1, 1, nullptr);
+  ICONINFO iconInfo = {TRUE, 0, 0, mask, color};
+  HICON icon = ::CreateIconIndirect(&iconInfo);
+  ::DeleteObject(color);
+  ::DeleteObject(mask);
+  if (icon == nullptr)
+    return;
+
+  if (CefCurrentlyOn(TID_UI)) {
+    ApplyWindowIcon((HWND)hwnd, icon);
+  } else {
+    CefPostTask(TID_UI, base::BindOnce(ApplyWindowIcon, (HWND)hwnd, icon));
+  }
+#endif
 }
 
 JNIEXPORT jboolean JNICALL

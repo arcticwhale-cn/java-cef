@@ -29,6 +29,14 @@ public interface CefDisplayHandler {
     public void onTitleChange(CefBrowser browser, String title);
 
     /**
+     * Browser favicon URL candidates changed (page-declared icon links,
+     * in decreasing order of suitability). [SWT integration]
+     * @param browser The browser generating the event.
+     * @param iconUrls The favicon URLs.
+     */
+    public void onFaviconURLChange(CefBrowser browser, String[] iconUrls);
+
+    /**
      * Browser fullscreen mode changed.
      * @param browser The browser generating the event.
      * @param fullscreen True if fullscreen mode is on.

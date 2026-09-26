@@ -129,6 +129,27 @@ void DisplayHandler::OnTitleChange(CefRefPtr<CefBrowser> browser,
                        jbrowser.get(), jtitle.get());
 }
 
+// [SWT integration] Expose the page-declared favicon URLs (Chromium resolves
+// <link rel="icon"> candidates); the Java layer downloads + decodes them.
+void DisplayHandler::OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
+                                        const std::vector<CefString>& icon_urls) {
+  ScopedJNIEnv env;
+  if (!env)
+    return;
+
+  ScopedJNIBrowser jbrowser(env, browser);
+  jobjectArray jurls = env->NewObjectArray(
+      (jsize)icon_urls.size(), env->FindClass("java/lang/String"), nullptr);
+  for (size_t i = 0; i < icon_urls.size(); ++i) {
+    ScopedJNIString jurl(env, icon_urls[i]);
+    env->SetObjectArrayElement(jurls, (jsize)i, jurl.get());
+  }
+
+  JNI_CALL_VOID_METHOD(env, handle_, "onFaviconURLChange",
+                       "(Lorg/cef/browser/CefBrowser;[Ljava/lang/String;)V",
+                       jbrowser.get(), jurls);
+}
+
 void DisplayHandler::OnFullscreenModeChange(CefRefPtr<CefBrowser> browser,
                                             bool fullscreen) {
   ScopedJNIEnv env;

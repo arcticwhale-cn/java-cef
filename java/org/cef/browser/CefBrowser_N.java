@@ -510,6 +510,19 @@ abstract class CefBrowser_N extends CefNativeAdapter implements CefBrowser {
         }
     }
 
+    /**
+     * [SWT integration] Set the window icon of the browser's top-level native
+     * window (native popups / DevTools) from top-down BGRA pixels. Child-mode
+     * browsers are ignored (the host toolkit owns any icon rendering).
+     */
+    public void setWindowIcon(int width, int height, byte[] bgra) {
+        try {
+            N_SetWindowIcon(width, height, bgra);
+        } catch (UnsatisfiedLinkError ule) {
+            ule.printStackTrace();
+        }
+    }
+
     @Override
     public double getZoomLevel() {
         try {
@@ -853,6 +866,7 @@ abstract class CefBrowser_N extends CefNativeAdapter implements CefBrowser {
     private final native void N_Close(boolean force);
     private final native void N_SetFocus(boolean enable);
     private final native void N_SetWindowVisibility(boolean visible);
+    private final native void N_SetWindowIcon(int width, int height, byte[] bgra);
     private final native double N_GetZoomLevel();
     private final native void N_SetZoomLevel(double zoomLevel);
     private final native void N_RunFileDialog(FileDialogMode mode, String title,

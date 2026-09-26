@@ -267,6 +267,13 @@ public interface CefBrowser {
     public void setWindowVisibility(boolean visible);
 
     /**
+     * [SWT integration] Set the window icon of the browser's top-level native
+     * window (native popups / DevTools) from top-down BGRA pixels. Child-mode
+     * browsers are ignored (the host toolkit owns any icon rendering).
+     */
+    public void setWindowIcon(int width, int height, byte[] bgra);
+
+    /**
      * Get the current zoom level. The default zoom level is 0.0.
      * @return The current zoom level.
      */

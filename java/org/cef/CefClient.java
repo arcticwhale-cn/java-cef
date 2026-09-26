@@ -327,6 +327,12 @@ public class CefClient extends CefClientHandler
     }
 
     @Override
+    public void onFaviconURLChange(CefBrowser browser, String[] iconUrls) {
+        if (displayHandler_ != null && browser != null)
+            displayHandler_.onFaviconURLChange(browser, iconUrls);
+    }
+
+    @Override
     public void onFullscreenModeChange(CefBrowser browser, boolean fullscreen) {
         if (displayHandler_ != null && browser != null)
             displayHandler_.onFullscreenModeChange(browser, fullscreen);

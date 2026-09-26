@@ -73,6 +73,12 @@ Java_org_cef_browser_CefBrowser_1N_N_1AddDevToolsMessageObserver(JNIEnv*,
  */
 JNIEXPORT jlong JNICALL
 Java_org_cef_browser_CefBrowser_1N_N_1GetWindowHandle(JNIEnv*, jobject, jlong);
+JNIEXPORT void JNICALL
+Java_org_cef_browser_CefBrowser_1N_N_1SetWindowIcon(JNIEnv*,
+                                                   jobject,
+                                                   jint,
+                                                   jint,
+                                                   jbyteArray);
 
 /*
  * Class:     org_cef_browser_CefBrowser_N

@@ -25,6 +25,11 @@ public abstract class CefDisplayHandlerAdapter implements CefDisplayHandler {
     }
 
     @Override
+    public void onFaviconURLChange(CefBrowser browser, String[] iconUrls) {
+        return;
+    }
+
+    @Override
     public void onFullscreenModeChange(CefBrowser browser, boolean fullscreen) {
         return;
     }
