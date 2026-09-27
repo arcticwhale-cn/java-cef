@@ -47,7 +47,7 @@ bool LifeSpanHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
   // the signature at runtime, so this stays in sync with the Java interface.
   JNI_CALL_METHOD(env, handle_, "onBeforePopup",
                   "(Lorg/cef/browser/CefBrowser;Lorg/cef/browser/"
-                  "CefFrame;Ljava/lang/String;Ljava/lang/String;IIZIIZIIZ)Z",
+                  "CefFrame;Ljava/lang/String;Ljava/lang/String;IZIZIZIZ)Z",
                   Boolean, jreturn, jbrowser.get(), jframe.get(),
                   jtargetUrl.get(), jtargetFrameName.get(),
                   (jint)popupFeatures.x, (jboolean)popupFeatures.xSet,
@@ -60,17 +60,49 @@ bool LifeSpanHandler::OnBeforePopup(CefRefPtr<CefBrowser> browser,
 
 void LifeSpanHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
   ScopedJNIEnv env;
-  if (!env || jbrowsers_.empty())
+  if (!env)
     return;
 
-  util::AddCefBrowser(browser);
+  jobject jbrowser = nullptr;
+  bool is_local_ref = false;
+  if (!jbrowsers_.empty()) {
+    // Browser created from Java (see CefBrowser_N::create).
+    util::AddCefBrowser(browser);
 
-  jobject jbrowser = jbrowsers_.front();
-  jbrowsers_.pop_front();
+    jbrowser = jbrowsers_.front();
+    jbrowsers_.pop_front();
 
-  CefRefPtr<ClientHandler> client =
-      (ClientHandler*)browser->GetHost()->GetClient().get();
-  client->OnAfterCreated();
+    CefRefPtr<ClientHandler> client =
+        (ClientHandler*)browser->GetHost()->GetClient().get();
+    client->OnAfterCreated();
+  } else if (browser->IsPopup()) {
+    // [SWT integration] Browser created natively by CEF itself
+    // (OnBeforePopup returned false). Upstream jcef pairs such browsers
+    // with no Java object, so every subsequent callback
+    // (onFaviconURLChange, onTitleChange, ...) would be delivered with a
+    // null browser parameter. Create the Java wrapper here and pair it so
+    // that callbacks carry a real browser object. The wrapper is kept
+    // alive by CefClient's browser map (populated by the onAfterCreated
+    // call below) and removed again in CefClient.onBeforeClose.
+    //
+    // util::AddCefBrowser is intentionally NOT called: native popups have
+    // their own top-level window and receive input directly. Routing them
+    // through the global mouse monitor hook (util_win) would forward
+    // popup clicks into the hosting toolkit's component tree.
+    jbrowser = NewJNIObject(env, "org/cef/browser/CefBrowserNativePopup",
+                            "(Lorg/cef/CefClient;Ljava/lang/String;)V",
+                            handle_.get(), NewJNIString(env, ""));
+    if (!jbrowser) {
+      // Class missing (e.g. an older jar without the fork's popup
+      // wrapper). Fall back to upstream behavior (unpaired popup).
+      return;
+    }
+    is_local_ref = true;
+  } else {
+    // Other browsers without a queued Java wrapper (e.g. DevTools) keep
+    // upstream behavior and stay unpaired.
+    return;
+  }
 
   // Add a reference to |browser| that will be released in
   // LifeSpanHandler::OnBeforeClose.
@@ -79,8 +111,14 @@ void LifeSpanHandler::OnAfterCreated(CefRefPtr<CefBrowser> browser) {
                          "(Lorg/cef/browser/CefBrowser;)V", jbrowser);
   }
 
-  // Release the global ref added in CefBrowser_N::create.
-  env->DeleteGlobalRef(jbrowser);
+  if (is_local_ref) {
+    // The wrapper is owned by CefClient's browser map now; release the
+    // local reference created by NewJNIObject.
+    env->DeleteLocalRef(jbrowser);
+  } else {
+    // Release the global ref added in CefBrowser_N::create.
+    env->DeleteGlobalRef(jbrowser);
+  }
 }
 
 bool LifeSpanHandler::DoClose(CefRefPtr<CefBrowser> browser) {
