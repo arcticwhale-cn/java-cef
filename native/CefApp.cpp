@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "include/cef_api_hash.h"
 #include "include/cef_app.h"
 #include "include/cef_version_info.h"
 
@@ -33,6 +34,16 @@ Java_org_cef_CefApp_N_1Initialize(JNIEnv* env,
                                   jobject c,
                                   jobject appHandler,
                                   jobject jsettings) {
+  // [SWT integration] CEF 139+ API-version handshake: libcef's ctocpp
+  // wrappers read a lazily initialized version that is -1 until cef_api_hash()
+  // is called. Initialize-time handlers are covered by the stock path, but
+  // dynamic registrations after CefInitialize (registerSchemeHandlerFactory)
+  // hit the uninitialized version and FATAL-crash inside libcef
+  // ("CefSchemeHandlerFactory_0_CToCpp called with invalid version -1").
+  // Pin the version before any wrapper structure is created (CEF forum
+  // topic 20348: calling cef_api_hash before cef_initialize is the fix).
+  cef_api_hash(CEF_API_VERSION, 0);
+
   return Context::GetInstance()->Initialize(env, c, appHandler, jsettings)
              ? JNI_TRUE
              : JNI_FALSE;

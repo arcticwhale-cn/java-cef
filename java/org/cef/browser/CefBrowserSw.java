@@ -108,8 +108,9 @@ public class CefBrowserSw extends CefBrowser_N {
     @Override
     protected CefBrowser_N createDevToolsBrowser(CefClient client, String url,
             CefRequestContext context, CefBrowser_N parent, Point inspectAt) {
-        throw new UnsupportedOperationException(
-                "DevTools are not supported for handle-injected browsers");
+        // [SWT integration] DevTools open as a native top-level window
+        // (ShowDevTools with an empty windowInfo) - see CefBrowserDevTools.
+        return new CefBrowserDevTools(client, url, context, parent, inspectAt);
     }
 
     @Override
